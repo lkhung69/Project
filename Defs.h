@@ -10,10 +10,13 @@ const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 600;
 const int MAP_WIDTH = 1920;
 const int MAP_HEIGHT = 1280;
-const int PLAYER_SIZE = 128;
+const int PLAYER_HEIGHT = 64;
+const int PLAYER_WIDTH = 64;
 const int TILE_SIZE = 64;
 const int MAP_ROWS = 20;
 const int MAP_COLS = 30;
+const int FRAME_COUNT = 4;
+const int FRAME_DELAY = 7;
 const char* WINDOW_TITLE = "Game";
 
 int gameMap[MAP_ROWS][MAP_COLS] = {

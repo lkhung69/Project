@@ -7,9 +7,44 @@
 
 ;
 
+struct Player {
+    int camX = 0, camY = 0;
+    int playerMapX = SCREEN_WIDTH / 2 - PLAYER_WIDTH / 2;
+    int playerMapY = SCREEN_HEIGHT / 2 - PLAYER_HEIGHT / 2;
+    int speed = 4;
+    int frameIndex = 0;
+    int frameDelayCounter = 0;
+    bool isMoving = false;
+    SDL_Rect frames[FRAME_COUNT];
+
+    Player() {
+        for (int i = 0; i < FRAME_COUNT; ++i) {
+            frames[i] = {i * PLAYER_WIDTH, 0, PLAYER_WIDTH, PLAYER_HEIGHT};
+        }
+    }
+
+    void updateAnimation() {
+        if (isMoving) {
+            frameDelayCounter++;
+            if (frameDelayCounter >= FRAME_DELAY) {
+                frameIndex = (frameIndex + 1) % FRAME_COUNT;
+                frameDelayCounter = 0;
+            }
+        } else {
+            frameIndex = 0; // Reset về frame đầu khi không di chuyển
+        }
+    }
+
+    SDL_Rect getCurrentFrame() const {
+        return frames[frameIndex];
+    }
+};
+
 struct Graphics {
     SDL_Renderer *renderer;
 	SDL_Window *window;
+	std::vector<SDL_Texture*> tileTextures;
+    SDL_Texture* playerTexture;
 
 	void logErrorAndExit(const char* msg, const char* error)
     {
@@ -79,8 +114,6 @@ struct Graphics {
         SDL_RenderCopy(renderer, texture, NULL, &dest);
     }
 
-    std::vector<SDL_Texture*> tileTextures;
-
     void loadTileTexture(SDL_Renderer* renderer){
         tileTextures.push_back(IMG_LoadTexture(renderer, "Graphics/Map/grass_0.png"));
         tileTextures.push_back(IMG_LoadTexture(renderer, "Graphics/Map/grass_1.png"));
@@ -105,14 +138,14 @@ struct Graphics {
                 int tileID = gameMap[row][col];
 
                 if (tileID < 0 || tileID >= (int)tileTextures.size()) {
-                    SDL_Log("Warning: Invalid tile ID %d at [%d][%d]", tileID, row, col);
+                    SDL_Log("Invalid tile ID %d at [%d][%d]", tileID, row, col);
                     continue;
                 }
 
                 SDL_Texture* tileTex = tileTextures[tileID];
 
                 if (tileTex == nullptr) {
-                    SDL_Log("Warning: Texture null for tile ID %d", tileID);
+                    SDL_Log("Texture null for tile ID %d", tileID);
                     continue;
                 }
 
@@ -124,6 +157,23 @@ struct Graphics {
                 SDL_RenderCopy(renderer, tileTex, nullptr, &destRect);
             }
         }
+    }
+
+    void loadPlayerTexture()
+    {
+        playerTexture = loadTexture("Graphics/player.png");
+    }
+
+    void renderPlayer(const Player& player) {
+        SDL_Rect srcRect = player.getCurrentFrame(); // Lấy frame hiện tại
+        SDL_Rect destRect = {
+            player.playerMapX - player.camX,
+            player.playerMapY - player.camY,
+            PLAYER_WIDTH,
+            PLAYER_HEIGHT
+        };
+
+        SDL_RenderCopy(renderer, playerTexture, &srcRect, &destRect);
     }
 
     void quit()

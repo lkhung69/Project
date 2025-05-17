@@ -21,8 +21,6 @@ int main(int argc, char *argv[])
     SDL_Texture* menuTexture = graphics.loadTexture("Graphics/menu.png");
     SDL_Texture* howToPlayTexture = graphics.loadTexture ("Graphics/howToPlay.png");
 
-    PlayerMoves player;
-
     bool quit = false;
     bool moveLeft = false, moveRight = false, moveUp = false, moveDown = false;
     SDL_Event event;
@@ -72,22 +70,28 @@ int main(int argc, char *argv[])
 
     SDL_DestroyTexture(menuTexture);
 
+    Player player;
+    graphics.loadPlayerTexture();
+
     //game loop
-    while (!quit){
-    graphics.prepareScene();
-        while (SDL_PollEvent(&event)){
+    while (!quit) {
+        graphics.prepareScene();
+
+        player.isMoving = false; // Reset trạng thái di chuyển mỗi frame
+
+        while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) quit = true;
 
-            if (event.type == SDL_KEYDOWN){
-                switch (event.key.keysym.sym){
+            if (event.type == SDL_KEYDOWN) {
+                switch (event.key.keysym.sym) {
                     case SDLK_w: moveUp = true; break;
                     case SDLK_s: moveDown = true; break;
                     case SDLK_a: moveLeft = true; break;
                     case SDLK_d: moveRight = true; break;
                 }
             }
-            if (event.type == SDL_KEYUP){
-                switch (event.key.keysym.sym){
+            if (event.type == SDL_KEYUP) {
+                switch (event.key.keysym.sym) {
                     case SDLK_w: moveUp = false; break;
                     case SDLK_s: moveDown = false; break;
                     case SDLK_a: moveLeft = false; break;
@@ -95,24 +99,21 @@ int main(int argc, char *argv[])
                 }
             }
         }
-        if (moveLeft) {
-            turnWest(player, MAP_WIDTH);
-        }
-        if (moveRight) {
-            turnEast(player, MAP_WIDTH);
-        }
-        if (moveUp) {
-            turnNorth(player, MAP_HEIGHT);
-        }
-        if (moveDown) {
-            turnSouth(player, MAP_HEIGHT);
-        }
+
+        // Cập nhật vị trí player
+        if (moveLeft) turnWest(player, MAP_WIDTH);
+        if (moveRight) turnEast(player, MAP_WIDTH);
+        if (moveUp) turnNorth(player, MAP_HEIGHT);
+        if (moveDown) turnSouth(player, MAP_HEIGHT);
+
+        // Cập nhật animation
+        player.updateAnimation();
 
         graphics.renderMap(graphics.renderer, player.camX, player.camY);
-        renderPlayer(player,graphics);
+        graphics.renderPlayer(player);
 
         graphics.presentScene();
-        SDL_Delay(10);
+        SDL_Delay(16); // ~60 FPS
     }
 
     graphics.quit();
