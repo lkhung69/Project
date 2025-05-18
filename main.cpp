@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
     while (!quit) {
         graphics.prepareScene();
 
-        player.isMoving = false; // Reset trạng thái di chuyển mỗi frame
+        player.isMoving = false;
 
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) quit = true;
@@ -100,20 +100,35 @@ int main(int argc, char *argv[])
             }
         }
 
-        // Cập nhật vị trí player
-        if (moveLeft) turnWest(player, MAP_WIDTH);
-        if (moveRight) turnEast(player, MAP_WIDTH);
-        if (moveUp) turnNorth(player, MAP_HEIGHT);
-        if (moveDown) turnSouth(player, MAP_HEIGHT);
+        bool isMoving = false;
 
-        // Cập nhật animation
-        player.updateAnimation();
+        if (moveLeft) {
+            turnWest(player, MAP_WIDTH);
+            isMoving = true;
+        }
+        if (moveRight) {
+            turnEast(player, MAP_WIDTH);
+            isMoving = true;
+        }
+        if (moveUp) {
+            turnNorth(player, MAP_HEIGHT);
+            isMoving = true;
+        }
+        if (moveDown) {
+            turnSouth(player, MAP_HEIGHT);
+            isMoving = true;
+        }
+
+        if (!isMoving) {
+            player.isMoving = false;
+            player.frameIndex = 0;
+        }
 
         graphics.renderMap(graphics.renderer, player.camX, player.camY);
         graphics.renderPlayer(player);
 
         graphics.presentScene();
-        SDL_Delay(16); // ~60 FPS
+        SDL_Delay(16);
     }
 
     graphics.quit();

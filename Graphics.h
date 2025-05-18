@@ -15,6 +15,8 @@ struct Player {
     int frameIndex = 0;
     int frameDelayCounter = 0;
     bool isMoving = false;
+    bool facingLeft = false;
+    SDL_RendererFlip flip = SDL_FLIP_NONE;
     SDL_Rect frames[FRAME_COUNT];
 
     Player() {
@@ -23,20 +25,32 @@ struct Player {
         }
     }
 
-    void updateAnimation() {
+    SDL_Rect getCurrentFrame() const {
+        return frames[frameIndex];
+    }
+
+    void updateDirection(bool movingLeft){
+        if (movingLeft) {
+            flip = SDL_FLIP_HORIZONTAL;
+            facingLeft = true;
+        }
+        else if (!movingLeft && facingLeft) {
+            flip = SDL_FLIP_NONE;
+            facingLeft = false;
+        }
+    }
+
+    void updateAnimation(bool isMoving) {
         if (isMoving) {
             frameDelayCounter++;
             if (frameDelayCounter >= FRAME_DELAY) {
                 frameIndex = (frameIndex + 1) % FRAME_COUNT;
                 frameDelayCounter = 0;
             }
-        } else {
-            frameIndex = 0; // Reset về frame đầu khi không di chuyển
         }
-    }
-
-    SDL_Rect getCurrentFrame() const {
-        return frames[frameIndex];
+        else {
+            frameIndex = 0;
+        }
     }
 };
 
@@ -57,8 +71,7 @@ struct Graphics {
             logErrorAndExit("SDL_Init", SDL_GetError());
 
         window = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
-        //full screen
-        //window = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_FULLSCREEN_DESKTOP);
+
         if (window == nullptr) logErrorAndExit("CreateWindow", SDL_GetError());
 
         if (!IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG))
@@ -66,8 +79,6 @@ struct Graphics {
 
         renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED |
                                               SDL_RENDERER_PRESENTVSYNC);
-        //Khi chạy trong máy ảo (ví dụ phòng máy ở trường)
-        //renderer = SDL_CreateSoftwareRenderer(SDL_GetWindowSurface(window));
 
         if (renderer == nullptr) logErrorAndExit("CreateRenderer", SDL_GetError());
 
@@ -165,7 +176,7 @@ struct Graphics {
     }
 
     void renderPlayer(const Player& player) {
-        SDL_Rect srcRect = player.getCurrentFrame(); // Lấy frame hiện tại
+        SDL_Rect srcRect = player.getCurrentFrame();
         SDL_Rect destRect = {
             player.playerMapX - player.camX,
             player.playerMapY - player.camY,
@@ -173,7 +184,7 @@ struct Graphics {
             PLAYER_HEIGHT
         };
 
-        SDL_RenderCopy(renderer, playerTexture, &srcRect, &destRect);
+        SDL_RenderCopyEx(renderer, playerTexture, &srcRect, &destRect, 0.0, NULL, player.flip);
     }
 
     void quit()

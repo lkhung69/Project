@@ -18,21 +18,26 @@ void updateCamera(Player& player, int mapWidth, int mapHeight) {
 }
 
 void turnWest(Player& player, int mapWidth) {
+    player.isMoving = true;
+    player.updateDirection(true);
+    player.updateAnimation(true);
     player.playerMapX -= player.speed;
     if (player.playerMapX < 0) player.playerMapX = 0;
     updateCamera(player, mapWidth, MAP_HEIGHT);
-    player.isMoving = true;
 }
 
 void turnEast(Player& player, int mapWidth) {
+    player.isMoving = true;
+    player.updateDirection(false);
+    player.updateAnimation(true);
     player.playerMapX += player.speed;
     if (player.playerMapX > mapWidth - PLAYER_WIDTH) player.playerMapX = mapWidth - PLAYER_WIDTH;
     updateCamera(player, mapWidth, MAP_HEIGHT);
-    player.isMoving = true;
 }
 
 void turnNorth(Player& player, int mapHeight) {
     player.playerMapY -= player.speed;
+    player.updateAnimation(true);
     if (player.playerMapY < 0) player.playerMapY = 0;
     updateCamera(player, MAP_WIDTH, mapHeight);
     player.isMoving = true;
@@ -40,6 +45,7 @@ void turnNorth(Player& player, int mapHeight) {
 
 void turnSouth(Player& player, int mapHeight) {
     player.playerMapY += player.speed;
+    player.updateAnimation(true);
     if (player.playerMapY > mapHeight - PLAYER_HEIGHT) player.playerMapY = mapHeight - PLAYER_HEIGHT;
     updateCamera(player, MAP_WIDTH, mapHeight);
     player.isMoving = true;
