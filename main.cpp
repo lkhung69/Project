@@ -71,11 +71,23 @@ int main(int argc, char *argv[])
     SDL_DestroyTexture(menuTexture);
 
     Player player;
+    Enemy enemy;
     graphics.loadPlayerTexture();
+    graphics.loadEnemyTexture();
+    srand(time(NULL));
 
     //game loop
     while (!quit) {
         graphics.prepareScene();
+
+        Uint32 currentTime = SDL_GetTicks();
+        if (currentTime - lastSpawnTime > SPAWN_INTERVAL) {
+            graphics.spawnEnemy(player.playerMapX, player.playerMapY);
+            lastSpawnTime = currentTime;
+        }
+
+        updateEnemies(graphics.enemies, player);
+        graphics.renderEnemies(player.camX, player.camY);
 
         player.isMoving = false;
 
@@ -126,6 +138,8 @@ int main(int argc, char *argv[])
 
         graphics.renderMap(graphics.renderer, player.camX, player.camY);
         graphics.renderPlayer(player);
+        updateEnemies(graphics.enemies, player);
+        graphics.renderEnemies(player.camX, player.camY);
 
         graphics.presentScene();
         SDL_Delay(16);

@@ -8,9 +8,9 @@
 ;
 
 struct Player {
-    int camX = 0, camY = 0;
-    int playerMapX = SCREEN_WIDTH / 2 - PLAYER_WIDTH / 2;
-    int playerMapY = SCREEN_HEIGHT / 2 - PLAYER_HEIGHT / 2;
+    int camX = MAP_WIDTH/2 - SCREEN_WIDTH/2, camY = MAP_HEIGHT/2 - SCREEN_HEIGHT/2;
+    int playerMapX = MAP_WIDTH / 2 - PLAYER_WIDTH / 2;
+    int playerMapY = MAP_HEIGHT / 2 - PLAYER_HEIGHT / 2;
     int speed = 4;
     int frameIndex = 0;
     int frameDelayCounter = 0;
@@ -54,11 +54,62 @@ struct Player {
     }
 };
 
+struct Enemy{
+    int enemyX, enemyY;
+    int enemySpeed = 2;
+    int enemyHealth = 100;
+    int enemyFrameIndex = 0;
+    int enemyFrameDelayCounter = 0;
+    bool enemyIsMoving = false;
+    bool facingRight = false;
+    SDL_Rect enemyRect {0,0,ENEMY_WIDTH, ENEMY_HEIGHT};
+    SDL_Rect enemyFrames[FRAME_COUNT];
+
+    Enemy(){
+        for (int i = 0; i < FRAME_COUNT; i++){
+            enemyFrames[i] = {i*ENEMY_WIDTH, 0, ENEMY_WIDTH, ENEMY_HEIGHT};
+        }
+    }
+
+    SDL_Rect getEnemyCurrentFrame() const{
+        return enemyFrames[enemyFrameIndex];
+    }
+
+    void updateEnemyAnimation(bool isMoving) {
+        if (enemyIsMoving) {
+            enemyFrameDelayCounter++;
+            if (enemyFrameDelayCounter >= ENEMY_FRAME_DELAY) {
+                enemyFrameIndex = (enemyFrameIndex + 1) % FRAME_COUNT;
+                enemyFrameDelayCounter = 0;
+            }
+        }
+        else {
+            enemyFrameIndex = 0;
+        }
+    }
+
+    void moveTowards(int targetX, int targetY) {
+        enemyIsMoving = true;
+        float dx = targetX - enemyX;
+        float dy = targetY - enemyY;
+        float distance = sqrt(dx*dx + dy*dy);
+
+        if (distance > 0) {
+            enemyX += static_cast<int>((dx / distance) * enemySpeed);
+            enemyY += static_cast<int>((dy / distance) * enemySpeed);
+        }
+        enemyRect.x = enemyX;
+        enemyRect.y = enemyY;
+    }
+};
+
 struct Graphics {
     SDL_Renderer *renderer;
 	SDL_Window *window;
 	std::vector<SDL_Texture*> tileTextures;
     SDL_Texture* playerTexture;
+    SDL_Texture* enemyTexture;
+    std::vector<Enemy> enemies;
 
 	void logErrorAndExit(const char* msg, const char* error)
     {
@@ -139,6 +190,10 @@ struct Graphics {
         tileTextures.push_back(IMG_LoadTexture(renderer, "Graphics/Map/stone_to_grass_down.png"));
         tileTextures.push_back(IMG_LoadTexture(renderer, "Graphics/Map/stone_0.png"));
         tileTextures.push_back(IMG_LoadTexture(renderer, "Graphics/Map/stone_1.png"));
+        tileTextures.push_back(IMG_LoadTexture(renderer, "Graphics/Map/spawn_point_up_left.png"));
+        tileTextures.push_back(IMG_LoadTexture(renderer, "Graphics/Map/spawn_point_up_right.png"));
+        tileTextures.push_back(IMG_LoadTexture(renderer, "Graphics/Map/spawn_point_down_right.png"));
+        tileTextures.push_back(IMG_LoadTexture(renderer, "Graphics/Map/spawn_point_down_left.png"));
     }
 
     void renderMap(SDL_Renderer* renderer, int camX, int camY){
@@ -170,10 +225,40 @@ struct Graphics {
         }
     }
 
-    void loadPlayerTexture()
-    {
+    void loadPlayerTexture(){
         playerTexture = loadTexture("Graphics/player.png");
     }
+
+    void loadEnemyTexture (){
+        enemyTexture = loadTexture("Graphics/enemy.png");
+    }
+
+    void spawnEnemy(int playerX, int playerY) {
+        Enemy newEnemy;
+
+        int side = rand() % 4;
+        switch(side) {
+            case 0:
+                newEnemy.enemyX = rand() % MAP_WIDTH;
+                newEnemy.enemyY = 0;
+                break;
+            case 1:
+                newEnemy.enemyX = MAP_WIDTH;
+                newEnemy.enemyY = rand() % MAP_HEIGHT;
+                break;
+            case 2:
+                newEnemy.enemyX = rand() % MAP_WIDTH;
+                newEnemy.enemyY = MAP_HEIGHT;
+                break;
+            case 3:
+                newEnemy.enemyX = 0;
+                newEnemy.enemyY = rand() % MAP_HEIGHT;
+                break;
+        }
+
+        enemies.push_back(newEnemy);
+    }
+
 
     void renderPlayer(const Player& player) {
         SDL_Rect srcRect = player.getCurrentFrame();
@@ -185,6 +270,19 @@ struct Graphics {
         };
 
         SDL_RenderCopyEx(renderer, playerTexture, &srcRect, &destRect, 0.0, NULL, player.flip);
+    }
+
+    void renderEnemies(int camX, int camY){
+        for (auto& enemy : enemies) {
+            SDL_Rect srcRect = enemy.getEnemyCurrentFrame();
+            SDL_Rect destRect = {
+                enemy.enemyX - camX,
+                enemy.enemyY - camY,
+                enemy.enemyRect.w,
+                enemy.enemyRect.h
+            };
+            SDL_RenderCopy(renderer, enemyTexture, &srcRect, &destRect);
+        }
     }
 
     void quit()

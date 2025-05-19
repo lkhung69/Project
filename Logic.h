@@ -7,6 +7,14 @@
 #include "Defs.h"
 #include "Graphics.h"
 
+void renderMenu(SDL_Renderer* renderer, SDL_Texture* menuTexture) {
+    SDL_RenderCopy(renderer, menuTexture, NULL, NULL);
+}
+
+void renderHowTo(SDL_Renderer* renderer, SDL_Texture* howToPlayTexture) {
+    SDL_RenderCopy(renderer, howToPlayTexture, NULL, NULL);
+}
+
 void updateCamera(Player& player, int mapWidth, int mapHeight) {
     player.camX = player.playerMapX - SCREEN_WIDTH / 2 + PLAYER_WIDTH / 2;
     player.camY = player.playerMapY - SCREEN_HEIGHT / 2 + PLAYER_HEIGHT / 2;
@@ -51,12 +59,16 @@ void turnSouth(Player& player, int mapHeight) {
     player.isMoving = true;
 }
 
-void renderMenu(SDL_Renderer* renderer, SDL_Texture* menuTexture) {
-    SDL_RenderCopy(renderer, menuTexture, NULL, NULL);
+void updateEnemies(std::vector<Enemy>& enemies, Player& player) {
+    for (auto& enemy : enemies) {
+        enemy.moveTowards(player.playerMapX, player.playerMapY);
+        enemy.updateEnemyAnimation(true);
+    }
+
+    enemies.erase(std::remove_if(enemies.begin(), enemies.end(), [](const Enemy& e) {
+            return e.enemyX < -100 || e.enemyX > MAP_WIDTH + 100 || e.enemyY < -100 || e.enemyY > MAP_HEIGHT + 100;
+    }),
+    enemies.end());
 }
 
-void renderHowTo(SDL_Renderer* renderer, SDL_Texture* howToPlayTexture) {
-    SDL_RenderCopy(renderer, howToPlayTexture, NULL, NULL);
-}
-
-#endif // LOGIC_H_INCLUDED
+#endif
