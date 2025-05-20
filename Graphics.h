@@ -63,6 +63,7 @@ struct Enemy{
     bool enemyIsMoving = false;
     bool facingRight = false;
     SDL_Rect enemyRect {0,0,ENEMY_WIDTH, ENEMY_HEIGHT};
+    SDL_RendererFlip flip = SDL_FLIP_NONE;
     SDL_Rect enemyFrames[FRAME_COUNT];
 
     Enemy(){
@@ -75,7 +76,15 @@ struct Enemy{
         return enemyFrames[enemyFrameIndex];
     }
 
-    void updateEnemyAnimation(bool isMoving) {
+    void updateEnemyDirection(bool movingRight) {
+        if (movingRight) {
+            flip = SDL_FLIP_NONE;
+        } else {
+            flip = SDL_FLIP_HORIZONTAL;
+        }
+    }
+
+    void updateEnemyAnimation(bool enemyIsMoving) {
         if (enemyIsMoving) {
             enemyFrameDelayCounter++;
             if (enemyFrameDelayCounter >= ENEMY_FRAME_DELAY) {
@@ -225,6 +234,18 @@ struct Graphics {
         }
     }
 
+    void renderMenu(SDL_Renderer* renderer, SDL_Texture* menuTexture) {
+        SDL_RenderCopy(renderer, menuTexture, NULL, NULL);
+    }
+
+    void renderHowTo(SDL_Renderer* renderer, SDL_Texture* howToPlayTexture) {
+        SDL_RenderCopy(renderer, howToPlayTexture, NULL, NULL);
+    }
+
+    void renderInGameMenu(SDL_Renderer* renderer, SDL_Texture* inGameMenu) {
+        SDL_RenderCopy(renderer, inGameMenu, NULL, NULL);
+    }
+
     void loadPlayerTexture(){
         playerTexture = loadTexture("Graphics/player.png");
     }
@@ -281,7 +302,7 @@ struct Graphics {
                 enemy.enemyRect.w,
                 enemy.enemyRect.h
             };
-            SDL_RenderCopy(renderer, enemyTexture, &srcRect, &destRect);
+            SDL_RenderCopyEx(renderer, enemyTexture, &srcRect, &destRect,0.0, NULL, enemy.flip);
         }
     }
 

@@ -8,8 +8,14 @@
 
 using namespace std;
 
-int main(int argc, char *argv[])
-{
+enum GameState {
+    MAIN_MENU,
+    PLAYING,
+    PAUSED,
+    HOW_TO_PLAY
+};
+
+int main(int argc, char *argv[]) {
     Graphics graphics;
     graphics.init();
     graphics.loadTileTexture(graphics.renderer);
@@ -19,132 +25,160 @@ int main(int argc, char *argv[])
     SDL_FreeSurface(icon);
 
     SDL_Texture* menuTexture = graphics.loadTexture("Graphics/menu.png");
-    SDL_Texture* howToPlayTexture = graphics.loadTexture ("Graphics/howToPlay.png");
+    SDL_Texture* howToPlayTexture = graphics.loadTexture("Graphics/howToPlay.png");
+    SDL_Texture* inGameMenuTexture = graphics.loadTexture("Graphics/inGameMenu.png");
 
     bool quit = false;
     bool moveLeft = false, moveRight = false, moveUp = false, moveDown = false;
     SDL_Event event;
 
-    bool inMenu = false;
-    bool howToPlay = false;
-    int mouseX, mouseY;
-    //menu
-    while (!inMenu){
-        graphics.prepareScene();
-        while (SDL_PollEvent(&event)){
-            SDL_GetMouseState(&mouseX, &mouseY);
-            if (event.type == SDL_MOUSEBUTTONDOWN) {
-                if (event.button.button == SDL_BUTTON_LEFT) {
-                    if (mouseX > (SCREEN_WIDTH/2 - 100) && mouseX < (SCREEN_WIDTH/2 + 100) && mouseY > (SCREEN_HEIGHT/2) && mouseY < (SCREEN_HEIGHT/2 + 50)){
-                        inMenu = true;
-                    }
-                    if (mouseX > (SCREEN_WIDTH/2 - 100) && mouseX < (SCREEN_WIDTH/2 + 100) && mouseY > (SCREEN_HEIGHT/2 + 75) && mouseY < (SCREEN_HEIGHT/2 + 125)){
-                        howToPlay = true;
-                        while (howToPlay) {
-                            while (SDL_PollEvent(&event)) {
-                                SDL_GetMouseState(&mouseX, &mouseY);
-                                if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
-                                    if (mouseX > 304 && mouseX < 495 && mouseY > 513 && mouseY < 576){
-                                        howToPlay = false;
-                                    }
-                                }
-                            }
-
-                            renderHowTo(graphics.renderer, howToPlayTexture);
-                            graphics.presentScene();
-                            SDL_Delay(100);
-                        }
-
-                    }
-                    if (mouseX > (SCREEN_WIDTH/2 - 100) && mouseX < (SCREEN_WIDTH/2 + 100) && mouseY > (SCREEN_HEIGHT/2 + 150) && mouseY < (SCREEN_HEIGHT/2 + 200)){
-                        quit = true;
-                        inMenu = true;
-                    }
-                }
-            }
-        }
-        renderMenu(graphics.renderer, menuTexture);
-        graphics.presentScene();
-        SDL_Delay(100);
-    }
-
-    SDL_DestroyTexture(menuTexture);
-
+    GameState gameState = MAIN_MENU;
     Player player;
-    Enemy enemy;
-    graphics.loadPlayerTexture();
-    graphics.loadEnemyTexture();
-    srand(time(NULL));
+    Uint32 lastSpawnTime = 0;
+    const Uint32 SPAWN_INTERVAL = 3000;
 
-    //game loop
     while (!quit) {
         graphics.prepareScene();
 
-        Uint32 currentTime = SDL_GetTicks();
-        if (currentTime - lastSpawnTime > SPAWN_INTERVAL) {
-            graphics.spawnEnemy(player.playerMapX, player.playerMapY);
-            lastSpawnTime = currentTime;
-        }
-
-        updateEnemies(graphics.enemies, player);
-        graphics.renderEnemies(player.camX, player.camY);
-
-        player.isMoving = false;
-
         while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) quit = true;
-
-            if (event.type == SDL_KEYDOWN) {
-                switch (event.key.keysym.sym) {
-                    case SDLK_w: moveUp = true; break;
-                    case SDLK_s: moveDown = true; break;
-                    case SDLK_a: moveLeft = true; break;
-                    case SDLK_d: moveRight = true; break;
-                }
+            if (event.type == SDL_QUIT) {
+                quit = true;
             }
-            if (event.type == SDL_KEYUP) {
-                switch (event.key.keysym.sym) {
-                    case SDLK_w: moveUp = false; break;
-                    case SDLK_s: moveDown = false; break;
-                    case SDLK_a: moveLeft = false; break;
-                    case SDLK_d: moveRight = false; break;
-                }
+
+            int mouseX, mouseY;
+            SDL_GetMouseState(&mouseX, &mouseY);
+
+            switch (gameState) {
+                case MAIN_MENU:
+                    if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
+                        if (mouseX > (SCREEN_WIDTH/2 - 100) && mouseX < (SCREEN_WIDTH/2 + 100)) {
+                            if (mouseY > (SCREEN_HEIGHT/2) && mouseY < (SCREEN_HEIGHT/2 + 50)) {
+                                gameState = PLAYING;
+                                player = Player();
+                                graphics.enemies.clear();
+                                graphics.loadPlayerTexture();
+                                graphics.loadEnemyTexture();
+                                srand(time(NULL));
+                            }
+                            else if (mouseY > (SCREEN_HEIGHT/2 + 75) && mouseY < (SCREEN_HEIGHT/2 + 125)) {
+                                gameState = HOW_TO_PLAY;
+                            }
+                            else if (mouseY > (SCREEN_HEIGHT/2 + 150) && mouseY < (SCREEN_HEIGHT/2 + 200)) {
+                                quit = true;
+                            }
+                        }
+                    }
+                    break;
+
+                case PLAYING:
+                    if (event.type == SDL_KEYDOWN) {
+                        switch (event.key.keysym.sym) {
+                            case SDLK_ESCAPE:
+                                gameState = PAUSED;
+                                break;
+                            case SDLK_w: moveUp = true; break;
+                            case SDLK_s: moveDown = true; break;
+                            case SDLK_a: moveLeft = true; break;
+                            case SDLK_d: moveRight = true; break;
+                        }
+                    }
+                    else if (event.type == SDL_KEYUP) {
+                        switch (event.key.keysym.sym) {
+                            case SDLK_w: moveUp = false; break;
+                            case SDLK_s: moveDown = false; break;
+                            case SDLK_a: moveLeft = false; break;
+                            case SDLK_d: moveRight = false; break;
+                        }
+                    }
+                    break;
+
+                case PAUSED:
+                    if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE) {
+                        gameState = PLAYING;
+                    }
+                    else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
+                        if (mouseX > 197 && mouseX < 603 && mouseY > 227 && mouseY < 273) {
+                            gameState = PLAYING;
+                        }
+                        if (mouseX > 197 && mouseX < 603 && mouseY > 297 && mouseY < 343) {
+                            gameState = HOW_TO_PLAY;
+                        }
+                        if (mouseX > 197 && mouseX < 603 && mouseY > 367 && mouseY < 413) {
+                            quit = true;
+                        }
+                    }
+                    break;
+
+                case HOW_TO_PLAY:
+                    if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
+                        if (mouseX > 304 && mouseX < 495 && mouseY > 513 && mouseY < 576) {
+                            gameState = MAIN_MENU;
+                        }
+                    }
+                    break;
             }
         }
 
-        bool isMoving = false;
+        switch (gameState) {
+            case PLAYING: {
+                Uint32 currentTime = SDL_GetTicks();
+                if (currentTime - lastSpawnTime > SPAWN_INTERVAL) {
+                    graphics.spawnEnemy(player.playerMapX, player.playerMapY);
+                    lastSpawnTime = currentTime;
+                }
 
-        if (moveLeft) {
-            turnWest(player, MAP_WIDTH);
-            isMoving = true;
-        }
-        if (moveRight) {
-            turnEast(player, MAP_WIDTH);
-            isMoving = true;
-        }
-        if (moveUp) {
-            turnNorth(player, MAP_HEIGHT);
-            isMoving = true;
-        }
-        if (moveDown) {
-            turnSouth(player, MAP_HEIGHT);
-            isMoving = true;
+                bool isMoving = false;
+                if (moveLeft) { turnWest(player, MAP_WIDTH); isMoving = true; player.updateAnimation(isMoving);}
+                if (moveRight) { turnEast(player, MAP_WIDTH); isMoving = true; player.updateAnimation(isMoving);}
+                if (moveUp) { turnNorth(player, MAP_HEIGHT); isMoving = true; player.updateAnimation(isMoving);}
+                if (moveDown) { turnSouth(player, MAP_HEIGHT); isMoving = true; player.updateAnimation(isMoving);}
+
+                if(!isMoving){
+                    player.isMoving = false;
+                    player.frameIndex = 0;
+                }
+                updateEnemies(graphics.enemies, player);
+                break;
+            }
+            case PAUSED:
+                break;
+            default:
+                break;
         }
 
-        if (!isMoving) {
-            player.isMoving = false;
-            player.frameIndex = 0;
-        }
+        switch (gameState) {
+            case MAIN_MENU:
+                graphics.renderMenu(graphics.renderer, menuTexture);
+                break;
 
-        graphics.renderMap(graphics.renderer, player.camX, player.camY);
-        graphics.renderPlayer(player);
-        updateEnemies(graphics.enemies, player);
-        graphics.renderEnemies(player.camX, player.camY);
+            case PLAYING:
+            case PAUSED:
+                graphics.renderMap(graphics.renderer, player.camX, player.camY);
+                graphics.renderPlayer(player);
+                graphics.renderEnemies(player.camX, player.camY);
+
+                if (gameState == PAUSED) {
+                    SDL_SetRenderDrawBlendMode(graphics.renderer, SDL_BLENDMODE_BLEND);
+                    SDL_SetRenderDrawColor(graphics.renderer, 0, 0, 0, 180);
+                    SDL_RenderFillRect(graphics.renderer, NULL);
+
+                    graphics.renderInGameMenu(graphics.renderer, inGameMenuTexture);
+                }
+                break;
+
+            case HOW_TO_PLAY:
+                graphics.renderHowTo(graphics.renderer, howToPlayTexture);
+                break;
+        }
 
         graphics.presentScene();
         SDL_Delay(16);
     }
 
+    SDL_DestroyTexture(menuTexture);
+    SDL_DestroyTexture(howToPlayTexture);
+    SDL_DestroyTexture(inGameMenuTexture);
     graphics.quit();
+
     return 0;
 }

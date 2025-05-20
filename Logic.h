@@ -7,14 +7,6 @@
 #include "Defs.h"
 #include "Graphics.h"
 
-void renderMenu(SDL_Renderer* renderer, SDL_Texture* menuTexture) {
-    SDL_RenderCopy(renderer, menuTexture, NULL, NULL);
-}
-
-void renderHowTo(SDL_Renderer* renderer, SDL_Texture* howToPlayTexture) {
-    SDL_RenderCopy(renderer, howToPlayTexture, NULL, NULL);
-}
-
 void updateCamera(Player& player, int mapWidth, int mapHeight) {
     player.camX = player.playerMapX - SCREEN_WIDTH / 2 + PLAYER_WIDTH / 2;
     player.camY = player.playerMapY - SCREEN_HEIGHT / 2 + PLAYER_HEIGHT / 2;
@@ -62,6 +54,12 @@ void turnSouth(Player& player, int mapHeight) {
 void updateEnemies(std::vector<Enemy>& enemies, Player& player) {
     for (auto& enemy : enemies) {
         enemy.moveTowards(player.playerMapX, player.playerMapY);
+        if (enemy.enemyX < player.playerMapX){
+            enemy.flip = SDL_FLIP_HORIZONTAL;
+        }
+        if (enemy.enemyX > player.playerMapX){
+            enemy.flip = SDL_FLIP_NONE;
+        }
         enemy.updateEnemyAnimation(true);
     }
 
