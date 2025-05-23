@@ -27,7 +27,7 @@ Tính năng đã bao gồm:
 - Font
 - Menu
 
-Ngưỡng điểm mong muốn: 8 - 8.5
+Ngưỡng điểm mong muốn: 7.5 - 8
 
 Nguồn tham khảo:
 
