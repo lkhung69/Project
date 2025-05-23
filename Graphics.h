@@ -3,56 +3,13 @@
 
 #include <SDL.h>
 #include <SDL_image.h>
+#include <SDL_mixer.h>
+#include <SDL_ttf.h>
 #include "Defs.h"
+#include "Sound.h"
+#include "Player.h"
 
 ;
-
-struct Player {
-    int camX = MAP_WIDTH/2 - SCREEN_WIDTH/2, camY = MAP_HEIGHT/2 - SCREEN_HEIGHT/2;
-    int playerMapX = MAP_WIDTH / 2 - PLAYER_WIDTH / 2;
-    int playerMapY = MAP_HEIGHT / 2 - PLAYER_HEIGHT / 2;
-    int speed = 4;
-    int frameIndex = 0;
-    int frameDelayCounter = 0;
-    bool isMoving = false;
-    bool facingLeft = false;
-    SDL_RendererFlip flip = SDL_FLIP_NONE;
-    SDL_Rect frames[FRAME_COUNT];
-
-    Player() {
-        for (int i = 0; i < FRAME_COUNT; ++i) {
-            frames[i] = {i * PLAYER_WIDTH, 0, PLAYER_WIDTH, PLAYER_HEIGHT};
-        }
-    }
-
-    SDL_Rect getCurrentFrame() const {
-        return frames[frameIndex];
-    }
-
-    void updateDirection(bool movingLeft){
-        if (movingLeft) {
-            flip = SDL_FLIP_HORIZONTAL;
-            facingLeft = true;
-        }
-        else if (!movingLeft && facingLeft) {
-            flip = SDL_FLIP_NONE;
-            facingLeft = false;
-        }
-    }
-
-    void updateAnimation(bool isMoving) {
-        if (isMoving) {
-            frameDelayCounter++;
-            if (frameDelayCounter >= FRAME_DELAY) {
-                frameIndex = (frameIndex + 1) % FRAME_COUNT;
-                frameDelayCounter = 0;
-            }
-        }
-        else {
-            frameIndex = 0;
-        }
-    }
-};
 
 struct Enemy{
     int enemyX, enemyY;
@@ -107,8 +64,33 @@ struct Enemy{
             enemyX += static_cast<int>((dx / distance) * enemySpeed);
             enemyY += static_cast<int>((dy / distance) * enemySpeed);
         }
+        else {
+            enemyIsMoving = false;
+        }
         enemyRect.x = enemyX;
         enemyRect.y = enemyY;
+    }
+};
+
+struct Bullet {
+    int x, y;
+    int directionX, directionY;
+    bool active;
+    SDL_Rect rect;
+
+    Bullet(int startX, int startY, int dx, int dy)
+        : x(startX), y(startY), directionX(dx), directionY(dy),
+          active(true), rect{x, y, BULLET_WIDTH, BULLET_HEIGHT} {}
+
+    void update() {
+        x += directionX * BULLET_SPEED;
+        y += directionY * BULLET_SPEED;
+        rect.x = x;
+        rect.y = y;
+
+        if (x < 0 || x > MAP_WIDTH || y < 0 || y > MAP_HEIGHT) {
+            active = false;
+        }
     }
 };
 
@@ -118,6 +100,11 @@ struct Graphics {
 	std::vector<SDL_Texture*> tileTextures;
     SDL_Texture* playerTexture;
     SDL_Texture* enemyTexture;
+    SDL_Texture* bulletTexture;
+    SDL_Texture* hpBarOutlineTexture;
+    SDL_Texture* hpBarInsideTexture;
+    std::vector<Bullet> bullets;
+    Uint32 lastFireTime = 0;
     std::vector<Enemy> enemies;
 
 	void logErrorAndExit(const char* msg, const char* error)
@@ -141,6 +128,16 @@ struct Graphics {
                                               SDL_RENDERER_PRESENTVSYNC);
 
         if (renderer == nullptr) logErrorAndExit("CreateRenderer", SDL_GetError());
+
+        if( Mix_OpenAudio( 44100, MIX_DEFAULT_FORMAT, 2, 2048 ) < 0 ) {
+            logErrorAndExit( "SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError() );
+        }
+
+        if (TTF_Init() == -1) {
+            logErrorAndExit("SDL_ttf could not initialize! SDL_ttf Error: ",
+                             TTF_GetError());
+        }
+
 
         SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
         SDL_RenderSetLogicalSize(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -234,8 +231,18 @@ struct Graphics {
         }
     }
 
-    void renderMenu(SDL_Renderer* renderer, SDL_Texture* menuTexture) {
+    void renderMenu(SDL_Renderer* renderer, SDL_Texture* menuTexture, SDL_Texture* playNormal, SDL_Texture* playHover, SDL_Texture* howNormal, SDL_Texture* howHover, SDL_Texture* quitNormal, SDL_Texture* quitHover, int hoverItem = -1) {
         SDL_RenderCopy(renderer, menuTexture, NULL, NULL);
+
+        SDL_Rect menuRects[3] = {
+            {SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/2, 200, 50},
+            {SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/2 + 75, 200, 50},
+            {SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/2 + 150, 200, 50}
+        };
+
+        SDL_RenderCopy(renderer, (hoverItem == 0) ? playHover : playNormal, NULL, &menuRects[0]);
+        SDL_RenderCopy(renderer, (hoverItem == 1) ? howHover : howNormal, NULL, &menuRects[1]);
+        SDL_RenderCopy(renderer, (hoverItem == 2) ? quitHover : quitNormal, NULL, &menuRects[2]);
     }
 
     void renderHowTo(SDL_Renderer* renderer, SDL_Texture* howToPlayTexture) {
@@ -246,12 +253,42 @@ struct Graphics {
         SDL_RenderCopy(renderer, inGameMenu, NULL, NULL);
     }
 
+    void renderGameOver(SDL_Renderer* renderer, SDL_Texture* gameOverTexture, SDL_Texture* playAgain, SDL_Texture* gameOverQuit, SDL_Texture* playAgain2, SDL_Texture* gameOverQuit2, int hoverItem = -1){
+        SDL_RenderCopy(renderer, gameOverTexture, NULL, NULL);
+
+        SDL_Rect gameOverRects[2] = {
+            {SCREEN_WIDTH/2 - 200, SCREEN_HEIGHT/2, 400, 50},
+            {SCREEN_WIDTH/2 - 200, SCREEN_HEIGHT/2 + 100, 400, 50},
+        };
+
+        SDL_RenderCopy(renderer, (hoverItem == 0) ? playAgain2 : playAgain, NULL, &gameOverRects[0]);
+        SDL_RenderCopy(renderer, (hoverItem == 1) ? gameOverQuit2 : gameOverQuit, NULL, &gameOverRects[1]);
+    }
+
     void loadPlayerTexture(){
         playerTexture = loadTexture("Graphics/player.png");
     }
 
     void loadEnemyTexture (){
         enemyTexture = loadTexture("Graphics/enemy.png");
+    }
+
+    void renderHealthBar(SDL_Renderer* renderer, int currentHP, int maxHP) {
+        float healthPercent = static_cast<float>(currentHP) / maxHP;
+        if (healthPercent < 0) healthPercent = 0;
+
+        int barWidth = HP_BAR_WIDTH;
+        int barHeight = HP_BAR_HEIGHT;
+        int barX = (SCREEN_WIDTH - barWidth) / 2;
+        int barY = SCREEN_HEIGHT - barHeight - HP_BAR_MARGIN_BOTTOM;
+
+        SDL_Rect background = { barX, barY, barWidth, barHeight };
+        SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
+        SDL_RenderFillRect(renderer, &background);
+
+        SDL_Rect foreground = { barX, barY, static_cast<int>(barWidth * healthPercent), barHeight };
+        SDL_SetRenderDrawColor(renderer, 200, 0, 0, 255);
+        SDL_RenderFillRect(renderer, &foreground);
     }
 
     void spawnEnemy(int playerX, int playerY) {
@@ -290,6 +327,16 @@ struct Graphics {
             PLAYER_HEIGHT
         };
 
+        if (player.isInvincible) {
+            if ((SDL_GetTicks() / 100) % 2 == 0) {
+                SDL_SetTextureColorMod(playerTexture, 255, 100, 100);
+            } else {
+                SDL_SetTextureColorMod(playerTexture, 255, 255, 255);
+            }
+        } else {
+            SDL_SetTextureColorMod(playerTexture, 255, 255, 255);
+        }
+
         SDL_RenderCopyEx(renderer, playerTexture, &srcRect, &destRect, 0.0, NULL, player.flip);
     }
 
@@ -306,9 +353,35 @@ struct Graphics {
         }
     }
 
+    void loadBulletTexture() {
+        bulletTexture = loadTexture("Graphics/bullet.png");
+    }
+
+    void renderBullets(int camX, int camY) {
+        for (auto& bullet : bullets) {
+            if (bullet.active) {
+                SDL_Rect destRect = {
+                    bullet.x - camX,
+                    bullet.y - camY,
+                    bullet.rect.w,
+                    bullet.rect.h
+                };
+                SDL_RenderCopy(renderer, bulletTexture, NULL, &destRect);
+            }
+        }
+    }
+
+    void fireBullet(Player& player) {
+        int startX = player.playerMapX + PLAYER_WIDTH/2 - BULLET_WIDTH/2;
+        int startY = player.playerMapY + PLAYER_HEIGHT/2 - BULLET_HEIGHT/2;
+        bullets.emplace_back(startX, startY, player.directionX, player.directionY);
+    }
+
     void quit()
     {
         IMG_Quit();
+        Mix_Quit();
+        TTF_Quit();
 
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);

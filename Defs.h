@@ -4,6 +4,7 @@
 #include <bits/stdc++.h>
 #include <SDL.h>
 #include <SDL_image.h>
+#include <SDL_mixer.h>
 #include "Graphics.h"
 
 const int SCREEN_WIDTH = 800;
@@ -12,6 +13,7 @@ const int MAP_WIDTH = 1920;
 const int MAP_HEIGHT = 1280;
 const int PLAYER_HEIGHT = 64;
 const int PLAYER_WIDTH = 64;
+const int PLAYER_SPEED = 4;
 const int ENEMY_HEIGHT = 64;
 const int ENEMY_WIDTH = 64;
 const int TILE_SIZE = 64;
@@ -20,9 +22,22 @@ const int MAP_COLS = 30;
 const int FRAME_COUNT = 4;
 const int FRAME_DELAY = 10;
 const int ENEMY_FRAME_DELAY = 10;
+const int BULLET_WIDTH = 8;
+const int BULLET_HEIGHT = 8;
+const int BULLET_SPEED = 7;
+const Uint32 FIRE_DELAY = 300;
 Uint32 lastSpawnTime = 0;
 const Uint32 SPAWN_INTERVAL = 1000;
-const char* WINDOW_TITLE = "Game";
+const char* WINDOW_TITLE = "Zombie Shooter";
+
+const int PLAYER_MAX_HEALTH = 100;
+
+const int HP_BAR_WIDTH = 200;
+const int HP_BAR_HEIGHT = 20;
+const int HP_BAR_MARGIN_BOTTOM = 30;
+
+SDL_Color hpBackgroundColor = {100, 100, 100, 255};
+SDL_Color hpForegroundColor = {200, 0, 0, 255};
 
 int gameMap[MAP_ROWS][MAP_COLS] = {
     {0, 0, 2, 0, 1, 0, 0, 1, 0, 1, 0, 0, 2, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2, 0, 1, 0},

@@ -1,27 +1,57 @@
 # depslib dependency file v1.0
-1747755968 source:c:\users\admin\documents\c++\game\main.cpp
+1747969769 source:c:\users\admin\documents\c++\game\main.cpp
 	<bits/stdc++.h>
 	<SDL.h>
 	<SDL_image.h>
+	<SDL_mixer.h>
 	"Graphics.h"
 	"Defs.h"
 	"Logic.h"
+	"Sound.h"
+	"Player.h"
+	"Txt.h"
 
-1747758157 c:\users\admin\documents\c++\game\graphics.h
+1747969257 c:\users\admin\documents\c++\game\graphics.h
 	<SDL.h>
 	<SDL_image.h>
+	<SDL_mixer.h>
+	<SDL_ttf.h>
 	"Defs.h"
+	"Sound.h"
+	"Player.h"
 
-1747754759 c:\users\admin\documents\c++\game\defs.h
+1747968499 c:\users\admin\documents\c++\game\defs.h
 	<bits/stdc++.h>
 	<SDL.h>
 	<SDL_image.h>
+	<SDL_mixer.h>
 	"Graphics.h"
 
-1747758191 c:\users\admin\documents\c++\game\logic.h
+1747969970 c:\users\admin\documents\c++\game\logic.h
 	<bits/stdc++.h>
 	<SDL.h>
 	<SDL_image.h>
+	<SDL_mixer.h>
 	"Defs.h"
 	"Graphics.h"
+	"Player.h"
+	"Sound.h"
+
+1747961742 c:\users\admin\documents\c++\game\sound.h
+	<bits/stdc++.h>
+	<SDL_mixer.h>
+	<SDL.h>
+
+1747969257 c:\users\admin\documents\c++\game\player.h
+	<SDL.h>
+	<SDL_image.h>
+	<SDL_mixer.h>
+	<SDL_ttf.h>
+	"Defs.h"
+	"Sound.h"
+
+1747969690 c:\users\admin\documents\c++\game\txt.h
+	<bits/stdc++.h>
+	<SDL.h>
+	<SDL_ttf.h>
 
